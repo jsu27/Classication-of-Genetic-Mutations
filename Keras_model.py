@@ -1,7 +1,6 @@
-import numpy
+import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
-#from keras.datasets import imdb
 from keras.models import Sequential
 from keras.layers import Dense
 from keras.layers import Flatten
@@ -10,70 +9,88 @@ from keras.layers.embeddings import Embedding
 from keras.preprocessing import sequence
 from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
-
-import data_retrieval as dr
+from keras.utils import to_categorical
 # fix random seed for reproducibility
-numpy.random.seed(7)
+np.random.seed(7)
+
+def get_samples(file_path):
+    fh = open(file_path, 'r')
+    sample_set = set()
+    sample_dict = {}
+    for word in fh.readlines():
+        sample_set.add(word.strip("\n"))
+    return sample_set
+    fh.close()
 
 # load the dataset but only keep the top n words, zero the rest
 top_words = 5000
 train_variants = pd.read_csv('Data/training_variants', nrows=top_words)
-trainx = pd.read_csv('Data/training_text', sep="\|\|", engine='python', header=None, skiprows=1, nrows=top_words, names=["ID","Text"])
+trainx = pd.read_csv('Data/training_text', sep="\|\|", engine='python', dtype={'Text': str}, header=None, skiprows=1, nrows=top_words, names=["ID","Text"])
+trainx["Class"] = train_variants["Class"]
+print("Loaded data.")
 
 #testx = pd.read_csv('Data/test_text', sep="\|\|", engine='python', header=None, skiprows=1, names=["ID","Text"])
 train, test = train_test_split(trainx, test_size=0.3)
+X_train = list(train["Text"])#[nltk.word_tokenize(str(text)) for text in train["Text"]]
+y_train = list(train["Class"])
+y_train = to_categorical(y_train, num_classes=10) #classes 1-9
+
+X_test = list(test["Text"]) #[nltk.word_tokenize(str(text)) for text in test["Text"]]
+y_test = list(test["Class"])
+y_test = to_categorical(y_test, num_classes=10)
+
+print("X_train len: {}".format(len(X_train)))
+print("y_train len: {}".format(len(y_train)))
+print("X_test len: {}".format(len(X_test)))
+print("y_test len: {}".format(len(y_test)))
+print("Split train and test data.")
 
 # truncate and pad input sequences
-max_text_length = 250 #???
+max_text_length = 250
 
 t = Tokenizer()
-t.fit_on_texts(dr.SAMPLES)
-vocab_size = len(t.word_index) + 1 #dr.vocab_size; size of vocab of training text = 256994
+t.fit_on_texts(X_train)
+vocab_size = len(t.word_index) + 1 #vocab_size; size of vocab of training text = 256994
 
 # integer encode the documents
-#encoded_docs = t.texts_to_sequences()
-#print(encoded_docs)
-# pad documents to a max length of 4 words
-X_train = sequence.pad_sequences(X_train, maxlen=max_text_length)
-X_test = sequence.pad_sequences(X_test, maxlen=max_text_length)
+encoded_train = t.texts_to_sequences(X_train)
+encoded_test = t.texts_to_sequences(X_test)
+
+# pad documents to a max length
+X_train = sequence.pad_sequences(encoded_train, maxlen=max_text_length)
+X_test = sequence.pad_sequences(encoded_test, maxlen=max_text_length)
+print("Padded data.")
 #WORD EMBEDDINGS
 embeddings_index = dict()
-f = open('word_vectors/glove.6B/glove.6B.50d.txt')
+f = open('word_vectors/glove.6B/glove.6B.50d.txt', encoding='utf-8')
 for line in f:
 	values = line.split()
 	word = values[0]
-	coefs = asarray(values[1:], dtype='float32')
+	coefs = np.asarray(values[1:], dtype='float32')
 	embeddings_index[word] = coefs
 f.close()
 
 print('Loaded %s word vectors.' % len(embeddings_index))
 
 #EMBED WORDS IN DATA (USE GLOVE)
-embedding_matrix = zeros((vocab_size, 50))
+embedding_matrix = np.zeros((vocab_size, 50))
 for word, i in t.word_index.items():
 	embedding_vector = embeddings_index.get(word)
 	if embedding_vector is not None:
 		embedding_matrix[i] = embedding_vector
 
-
-#EMBED IN MODEL
+#CREATE RNN MODEL
 embedding_vector_length = 50
 model = Sequential()
-e = Embedding(vocab_size, embedding_vector_length, weights=[embedding_matrix], input_length=max_review_length, trainable=False) #input_dim (vocab size), vector dim, input_len (# words per document)
+e = Embedding(vocab_size, embedding_vector_length, weights=[embedding_matrix], input_length=max_text_length, trainable=False) #input_dim (vocab size), vector dim, input_len (# words per document)
 model.add(e)
 #model.add(Embedding(top_words, embedding_vector_length, input_length=max_review_length)) #input_dim (vocab size), vector dim, input_len (# words per document)
 model.add(LSTM(100))
-model.add(Dense(1, activation='sigmoid'))
+model.add(Dense(10, activation='sigmoid'))
 model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
 print(model.summary())
-model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=3, batch_size=64)
+model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=3, batch_size=28)
 
-
-
-
-# Final evaluation of the model
-scores = model.evaluate(X_test, y_test, verbose=0)
-print("Accuracy: %.2f%%" % (scores[1]*100))
 
 # Final evaluation of the model
 scores = model.evaluate(X_test, y_test, verbose=0)
