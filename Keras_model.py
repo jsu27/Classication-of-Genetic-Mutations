@@ -80,17 +80,15 @@ for word, i in t.word_index.items():
 		embedding_matrix[i] = embedding_vector
 
 #CREATE RNN MODEL
-embedding_vector_length = 50
 model = Sequential()
-e = Embedding(vocab_size, embedding_vector_length, weights=[embedding_matrix], input_length=max_text_length, trainable=False) #input_dim (vocab size), vector dim, input_len (# words per document)
+e = Embedding(vocab_size, embedding_vector_length, weights=[embedding_matrix], input_length=max_text_length, trainable=True) #input_dim (vocab size), vector dim, input_len (# words per document)
 model.add(e)
-#model.add(Embedding(top_words, embedding_vector_length, input_length=max_review_length)) #input_dim (vocab size), vector dim, input_len (# words per document)
-model.add(LSTM(100))
-model.add(Dense(10, activation='sigmoid'))
+model.add(Bidirectional(LSTM(embedding_vector_length, return_sequences = True)))
+model.add(Bidirectional(LSTM(embedding_vector_length)))
+model.add((Dense(10, activation='softmax')))
 model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
-print(model.summary())
-model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=3, batch_size=28)
-
+#print(model.summary())
+model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=20, batch_size=100)
 
 # Final evaluation of the model
 scores = model.evaluate(X_test, y_test, verbose=0)
