@@ -2,9 +2,7 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from keras.models import Sequential
-from keras.layers import Dense
-from keras.layers import Flatten
-from keras.layers import LSTM
+from keras.layers import Dense, Flatten, LSTM, Bidirectional
 from keras.layers.embeddings import Embedding
 from keras.preprocessing import sequence
 from keras.preprocessing.text import Tokenizer
@@ -80,6 +78,7 @@ for word, i in t.word_index.items():
 		embedding_matrix[i] = embedding_vector
 
 #CREATE RNN MODEL
+embedding_vector_length = 50
 model = Sequential()
 e = Embedding(vocab_size, embedding_vector_length, weights=[embedding_matrix], input_length=max_text_length, trainable=True) #input_dim (vocab size), vector dim, input_len (# words per document)
 model.add(e)
