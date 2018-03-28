@@ -44,7 +44,7 @@ print("y_test len: {}".format(len(y_test)))
 print("Split train and test data.")
 
 # truncate and pad input sequences
-max_text_length = 250
+max_text_length = 700 #7356 #from calculations
 
 t = Tokenizer()
 t.fit_on_texts(X_train)
@@ -60,7 +60,8 @@ X_test = sequence.pad_sequences(encoded_test, maxlen=max_text_length)
 print("Padded data.")
 #WORD EMBEDDINGS
 embeddings_index = dict()
-f = open('word_vectors/glove.6B/glove.6B.50d.txt', encoding='utf-8')
+#f = open('word_vectors/glove.6B/glove.6B.50d.txt', encoding='utf-8') #Glove data
+f = open('word_vectors/pub.50.vec/pub.50.vec', encoding='utf-8') #pubmed data
 for line in f:
 	values = line.split()
 	word = values[0]
