@@ -21,7 +21,7 @@ def get_samples(file_path):
     fh.close()
 
 # load the dataset but only keep the top n words, zero the rest
-top_words = 5000
+top_words = 1000
 train_variants = pd.read_csv('Data/training_variants', nrows=top_words)
 trainx = pd.read_csv('Data/training_text', sep="\|\|", engine='python', dtype={'Text': str}, header=None, skiprows=1, nrows=top_words, names=["ID","Text"])
 trainx["Class"] = train_variants["Class"]
@@ -60,36 +60,39 @@ X_test = sequence.pad_sequences(encoded_test, maxlen=max_text_length)
 print("Padded data.")
 #WORD EMBEDDINGS
 embeddings_index = dict()
-#f = open('word_vectors/glove.6B/glove.6B.50d.txt', encoding='utf-8') #Glove data
-f = open('word_vectors/pub.50.vec/pub.50.vec', encoding='utf-8') #pubmed data
+f = open('word_vectors/glove.6B/glove.6B.300d.txt', encoding='utf-8') #Glove data
+#f = open('word_vectors/pub.50.vec/pub.50.vec', encoding='latin-1') #pubmed data
+embedding_vector_length = 300
+
 for line in f:
 	values = line.split()
 	word = values[0]
-	coefs = np.asarray(values[1:], dtype='float32')
+	coefs = np.asarray(values[1:])#, dtype='float32')
 	embeddings_index[word] = coefs
 f.close()
 
-print('Loaded %s word vectors.' % len(embeddings_index))
+print('Loaded %s word vectors.' % len(embeddings_index)) #Glove: 400000 pubmed:  5764835
 
 #EMBED WORDS IN DATA (USE GLOVE)
-embedding_matrix = np.zeros((vocab_size, 50))
+embedding_matrix = np.zeros((vocab_size, embedding_vector_length))
 for word, i in t.word_index.items():
 	embedding_vector = embeddings_index.get(word)
 	if embedding_vector is not None:
 		embedding_matrix[i] = embedding_vector
 
 #CREATE RNN MODEL
-embedding_vector_length = 50
 model = Sequential()
 e = Embedding(vocab_size, embedding_vector_length, weights=[embedding_matrix], input_length=max_text_length, trainable=True) #input_dim (vocab size), vector dim, input_len (# words per document)
 model.add(e)
 model.add(Bidirectional(LSTM(embedding_vector_length, return_sequences = True)))
+model.add(Bidirectional(LSTM(embedding_vector_length, return_sequences = True)))
 model.add(Bidirectional(LSTM(embedding_vector_length)))
+
 model.add((Dense(10, activation='softmax')))
 model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
 #print(model.summary())
 model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=20, batch_size=100)
-
+#2324, 997
 # Final evaluation of the model
 scores = model.evaluate(X_test, y_test, verbose=0)
 print("Accuracy: %.2f%%" % (scores[1]*100))
