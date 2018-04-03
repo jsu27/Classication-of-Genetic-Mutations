@@ -18,46 +18,24 @@ train_variants = pd.read_csv('Data/training_variants', nrows=top_words)
 trainx = pd.read_csv('Data/training_text', sep="\|\|", engine='python', dtype={'Text': str}, header=None, skiprows=1, nrows=top_words, names=["ID","Text"])
 trainx["Class"] = train_variants["Class"]
 print("Loaded data.")
-'''
-def read_data(file_path):
-    fh = open(file_path, 'r')
-    data = []
-    for line in fh.readLines():
-        line = line[line.find('\|\|')+4:] #entire research paper
-        for sent in sent_tokenize(line):
-            data.append(sent)'''
-top_words = 5000
-#testx = pd.read_csv('Data/test_text', sep="\|\|", engine='python', header=None, skiprows=1, names=["ID","Text"])
-train, test = train_test_split(trainx, test_size=0.3)
-X_train1 = list(train["Text"])#[nltk.word_tokenize(str(text)) for text in train["Text"]]
-y_train1 = list(train["Class"])
-X_train = []
-y_train = []
-for i in range(train.shape[0]):
-    text = X_train1[i]
-    for sent in sent_tokenize(text):
-        X_train.append(sent)
-        y_train.append(y_train1[i])
-print(X_train[:10])
-print(y_train[:10])
-y_train = to_categorical(y_train, num_classes=10) #classes 1-9
 
-X_test1 = list(test["Text"]) #[nltk.word_tokenize(str(text)) for text in test["Text"]]
-y_test1 = list(test["Class"])
-X_test = []
-y_test = []
-for i in range(test.shape[0]):
-    text = X_test1[i]
+X1 = list(trainx["Text"])
+y1 = list(trainx["Class"])
+X = []
+y = []
+for i in range(trainx.shape[0]):
+    text = X1[i]
     for sent in sent_tokenize(text):
-        X_test.append(sent)
-        y_test.append(y_test1[i])
-print(X_test[:10])
-print(y_test[:10])
-y_test = to_categorical(y_test, num_classes=10)
+        X.append(sent)
+        y.append(y1[i])
+print(X[:10])
+print(y[:10])
+y = to_categorical(y, num_classes=10) #classes 1-9
+X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=0.7, test_size=0.3)
 
-print("X_train len: {}".format(len(X_train)))
+print("X_train len: {}".format(len(X_train))) #965658
 print("y_train len: {}".format(len(y_train)))
-print("X_test len: {}".format(len(X_test)))
+print("X_test len: {}".format(len(X_test))) #420876
 print("y_test len: {}".format(len(y_test)))
 print("Split train and test data.")
 
@@ -68,10 +46,11 @@ vocab_size = len(t.word_index) + 1 #vocab_size; size of vocab of training text =
 
 # encode the documents
 encoded_train = t.texts_to_sequences(X_train)
-#max_text_length = np.median([len(text) for text in encoded_train])
-max_text_length = 700 #7356 #from calculations
-#max_text_length = int(max_text_length.round())
-#print("Avg text length: {}".format(max_text_length))
+print(encoded_train[:10])
+max_text_length = int(np.median([len(text) for text in encoded_train]))
+print(max_text_length)
+#max_text_length = 22 #from calculations
+
 encoded_test = t.texts_to_sequences(X_test)
 
 # pad documents to a max length
@@ -103,11 +82,12 @@ model = Sequential()
 e = Embedding(vocab_size, embedding_vector_length, weights=[embedding_matrix], input_length=max_text_length, trainable=True) #input_dim (vocab size), vector dim, input_len (# words per document)
 model.add(e)
 model.add(Bidirectional(LSTM(embedding_vector_length, return_sequences = True)))
+model.add(Bidirectional(LSTM(embedding_vector_length, return_sequences = True)))
 model.add(Bidirectional(LSTM(embedding_vector_length)))
 model.add((Dense(10, activation='softmax')))
 model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
 #print(model.summary())
-model.fit(X_train[:10000], y_train[:10000], validation_data=(X_test[:3000], y_test[:3000]), epochs=10, batch_size=100)
+model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=20, batch_size=100)
 
 # Final evaluation of the model
 scores = model.evaluate(X_test, y_test, verbose=0)
