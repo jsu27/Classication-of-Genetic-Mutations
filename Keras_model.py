@@ -1,9 +1,11 @@
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
+
 from nltk.tokenize import sent_tokenize
 from sklearn.model_selection import train_test_split
 from keras.models import Sequential
-from keras.layers import Dense, Flatten, LSTM, TimeDistributed, Bidirectional
+from keras.layers import Dense, Flatten, LSTM, TimeDistributed, Bidirectional, Dropout
 from keras.layers.embeddings import Embedding
 from keras.preprocessing import sequence
 from keras.preprocessing.text import Tokenizer
@@ -27,11 +29,11 @@ for i in range(trainx.shape[0]):
     text = X1[i]
     for sent in sent_tokenize(text):
         X.append(sent)
-        y.append(y1[i])
+        y.append(y1[i] - 1) #CLASSES: 0 - 8 now
 print(X[:10])
 print(y[:10])
-y = to_categorical(y, num_classes=10) #classes 1-9
-X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=0.7, test_size=0.3)
+y = to_categorical(y, num_classes=9) #classes 0 - 8
+X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=0.7*0.1, test_size=0.3*0.1)
 
 print("X_train len: {}".format(len(X_train))) #965658
 print("y_train len: {}".format(len(y_train)))
@@ -47,9 +49,9 @@ vocab_size = len(t.word_index) + 1 #vocab_size; size of vocab of training text =
 # encode the documents
 encoded_train = t.texts_to_sequences(X_train)
 print(encoded_train[:10])
-max_text_length = int(np.median([len(text) for text in encoded_train]))
-print(max_text_length)
-#max_text_length = 22 #from calculations
+#max_text_length = int(np.median([len(text) for text in encoded_train]))
+#print(max_text_length)
+max_text_length = 22 #from calculations
 
 encoded_test = t.texts_to_sequences(X_test)
 
@@ -84,11 +86,31 @@ model.add(e)
 model.add(Bidirectional(LSTM(embedding_vector_length, return_sequences = True)))
 model.add(Bidirectional(LSTM(embedding_vector_length, return_sequences = True)))
 model.add(Bidirectional(LSTM(embedding_vector_length)))
-model.add((Dense(10, activation='softmax')))
+model.add(Dropout(0.5))
+model.add((Dense(9, activation='softmax')))
 model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
 #print(model.summary())
-model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=20, batch_size=100)
+history = model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=3, batch_size=100)
 
 # Final evaluation of the model
 scores = model.evaluate(X_test, y_test, verbose=0)
 print("Accuracy: %.2f%%" % (scores[1]*100))
+
+print(history.history.keys())
+# summarize history for accuracy
+plt.plot(history.history['acc'])
+plt.plot(history.history['val_acc'])
+plt.title('model accuracy')
+plt.ylabel('accuracy')
+plt.xlabel('epoch')
+plt.legend(['train', 'test'], loc='upper left')
+plt.show()
+
+# summarize history for loss
+plt.plot(history.history['loss'])
+plt.plot(history.history['val_loss'])
+plt.title('model loss')
+plt.ylabel('loss')
+plt.xlabel('epoch')
+plt.legend(['train', 'test'], loc='upper left')
+plt.show()
