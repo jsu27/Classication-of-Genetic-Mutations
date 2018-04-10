@@ -112,8 +112,8 @@ if (rand_search_dropout):
 
         y_pred = model.predict(X_test)
         y_pred = [np.argmax(y_pred[i]) for i in range(len(y_pred))]
-        y_test = [np.argmax(y_test[i]) for i in range(len(y_test))]
-        cm = confusion_matrix(y_test, y_pred)
+        y_test2 = [np.argmax(y_test[i]) for i in range(len(y_test))]
+        cm = confusion_matrix(y_test2, y_pred)
         print(cm)
 
         # summarize history for accuracy
