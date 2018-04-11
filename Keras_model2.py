@@ -14,7 +14,7 @@ from keras.utils import to_categorical
 import keras.optimizers
 # fix random seed for reproducibility
 np.random.seed(7)
-DEBUG = False
+DEBUG = True
 # load the datasets: trainx = text data; train_variants = classes
 trainx = pd.read_csv('Data/training_text', sep="\|\|", engine='python', dtype={'Text': str}, header=None, skiprows=1, names=["ID","Text"])
 train_variants = pd.read_csv('Data/training_variants')
@@ -91,7 +91,7 @@ lr = 0.0001
 
 if (rand_search_dropout):
     for i in range(10):
-        dropout = np.random.uniform(0, 1)
+        dropout = round(np.random.uniform(0, 1), 2)
         #CREATE RNN MODEL
         model = Sequential()
         e = Embedding(vocab_size, embedding_vector_length, weights=[embedding_matrix], input_length=max_text_length, trainable=True)
@@ -108,7 +108,7 @@ if (rand_search_dropout):
 
         # Final evaluation of the model
         scores = model.evaluate(X_test, y_test, verbose=0)
-        print("Accuracy: %.2f%%" % (scores[1]*100))
+        print("Accuracy: {}%" % (round(scores[1]*100, 2)))
 
         y_pred = model.predict(X_test)
         y_pred = [np.argmax(y_pred[i]) for i in range(len(y_pred))]
@@ -117,29 +117,30 @@ if (rand_search_dropout):
         print(cm)
 
         # summarize history for accuracy
-        plt.figure(1)
+        plt.figure(3*i+1)
         plt.plot(history.history['acc'])
         plt.plot(history.history['val_acc'])
-        plt.title('model accuracy - dropout = {}'.format(dropout))
+        plt.title('model accuracy: dropout={0} acc={1}'.format(dropout, round(scores[1]*100, 2)))
         plt.ylabel('accuracy')
         plt.xlabel('epoch')
         plt.legend(['train', 'test'], loc='upper left')
-        plt.savefig('acc{}.png'.format(i))
+        plt.savefig('acc{0}.png'.format(i))
         # summarize history for loss
-        plt.figure(2)
+        plt.figure(3*i+2)
         plt.plot(history.history['loss'])
         plt.plot(history.history['val_loss'])
-        plt.title('model loss - dropout = {}'.format(dropout))
+        plt.title('model loss: dropout={}'.format(dropout))
         plt.ylabel('loss')
         plt.xlabel('epoch')
         plt.legend(['train', 'test'], loc='upper left')
         plt.savefig('loss{}.png'.format(i))
 
-        plt.matshow(cm)
-        plt.title('Confusion matrix - dropout = {}'.format(dropout))
+        plt.clf()
+        plt.matshow(cm, fignum=False)
+        plt.title('Confusion matrix: dropout={}'.format(dropout))
         plt.colorbar()
         plt.ylabel('True label')
         plt.xlabel('Predicted label')
         plt.savefig('cm{}.png'.format(i))
 
-        plt.show()
+        #plt.show()
