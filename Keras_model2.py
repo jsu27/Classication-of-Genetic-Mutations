@@ -31,12 +31,13 @@ for i in range(trainx.shape[0]):
     for sent in sent_tokenize(text):
         X.append(sent)
         y.append(y1[i] - 1) #classes 0 - 8 instead of 1 - 9
+#class_count = [235547, 182953, 24939, 271578, 76715, 79296, 485804, 9534, 20168]
 y = to_categorical(y, num_classes=9) #one hot vector
 
-ratio = 0.1 #ratio of data
+ratio = 0.3 #ratio of data
 if (DEBUG):
-    ratio = 0.01
-X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=0.7*ratio, test_size=0.3*ratio)
+    ratio = 0.15
+X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=0.7*ratio, test_size=0.3*ratio, shuffle=True)
 
 print("X_train len: {}".format(len(X_train))) #965658
 print("y_train len: {}".format(len(y_train)))
@@ -108,13 +109,15 @@ if (rand_search_dropout):
 
         # Final evaluation of the model
         scores = model.evaluate(X_test, y_test, verbose=0)
-        print("Accuracy: {}%" % (round(scores[1]*100, 2)))
+        print("Accuracy: {}%".format(round(scores[1]*100, 2)))
 
+        #confusion matrix
         y_pred = model.predict(X_test)
         y_pred = [np.argmax(y_pred[i]) for i in range(len(y_pred))]
         y_test2 = [np.argmax(y_test[i]) for i in range(len(y_test))]
         cm = confusion_matrix(y_test2, y_pred)
         print(cm)
+        cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
 
         # summarize history for accuracy
         plt.figure(3*i+1)
