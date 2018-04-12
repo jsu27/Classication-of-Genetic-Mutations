@@ -12,6 +12,8 @@ from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
 from keras.utils import to_categorical
 import keras.optimizers
+from imblearn.under_sampling import RandomUnderSampler
+
 # fix random seed for reproducibility
 np.random.seed(7)
 DEBUG = True
@@ -29,14 +31,13 @@ y = []
 for i in range(trainx.shape[0]):
     text = X1[i]
     for sent in sent_tokenize(text):
-        X.append(sent)
+        X.append([sent])
         y.append(y1[i] - 1) #classes 0 - 8 instead of 1 - 9
 #class_count = [235547, 182953, 24939, 271578, 76715, 79296, 485804, 9534, 20168]
-y = to_categorical(y, num_classes=9) #one hot vector
 
 ratio = 0.3 #ratio of data
 if (DEBUG):
-    ratio = 0.15
+    ratio = 0.4
 X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=0.7*ratio, test_size=0.3*ratio, shuffle=True)
 
 print("X_train len: {}".format(len(X_train))) #965658
@@ -44,6 +45,23 @@ print("y_train len: {}".format(len(y_train)))
 print("X_test len: {}".format(len(X_test))) #420876
 print("y_test len: {}".format(len(y_test)))
 print("Split train and test data.")
+
+rus = RandomUnderSampler(random_state=0)
+X_train, y_train = rus.fit_sample(X_train, y_train)
+y_train = to_categorical(y_train, num_classes=9) #one hot vector
+print(X_train[:10])
+print("X train resampled len", len(X_train))
+print(y_train[:10])
+print("y train resampled len", len(y_train))
+
+X_test, y_test = rus.fit_sample(X_test, y_test)
+y_test = to_categorical(y_test, num_classes=9) #one hot vector
+print(X_test[:10])
+print("X test resampled len", len(X_test))
+print(y_test[:10])
+print("y test resampled len", len(y_test))
+X_train = [X_train[i][0] for i in range(len(X_train))]
+X_test = [X_test[i][0] for i in range(len(X_test))]
 
 # truncate and pad input sequences
 t = Tokenizer()
@@ -118,6 +136,7 @@ if (rand_search_dropout):
         cm = confusion_matrix(y_test2, y_pred)
         print(cm)
         cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+        print(cm)
 
         # summarize history for accuracy
         plt.figure(3*i+1)
