@@ -16,7 +16,7 @@ import keras.optimizers
 
 # fix random seed for reproducibility
 np.random.seed(7)
-DEBUG = True
+DEBUG = False
 # load the datasets: trainx = text data; train_variants = classes
 trainx = pd.read_csv('Data/training_text', sep="\|\|", engine='python', dtype={'Text': str}, header=None, skiprows=1, names=["ID","Text"])
 train_variants = pd.read_csv('Data/training_variants')
@@ -43,17 +43,7 @@ for i in range(len(y1)):
     num = y1[i] - 1
     class_counts[num] += 1
 print(class_counts)
-'''
-def undersample(n, class_counts): #n = min number of samples in 1 class, data = entire dataset
-    indices = []
-    for i in range(len(data)):
-        indices.append(np.random.choice(len(data[i]), n))
-    return indices
 
-X = np.array(X)
-y = np.array(y)
-for i in range(len(X)):
-'''
 ratio = 1 #ratio of data
 if (DEBUG):
     ratio = 0.7
@@ -132,17 +122,17 @@ for word, i in t.word_index.items():
     else: #if word not found, create random vector
         embedding_matrix[i] = np.random.uniform(-1, 1, embedding_vector_length)
 dropout = 0.55
-epochs = 25
+epochs = 150
 if DEBUG:
-    epochs = 3
+    epochs = 25
 rand_search_dropout = True
 rand_search_lr = True
 lr = 0.0001
-lrs = [0.00000001, 0.0000001, 0.000001, 0.00001, 0.00005, 0.0001, 0.0005, 0.001]
+lrs = [0.00003, 0.00005]#[.001, 0.0005, 0.0001]#[0.00003, 0.00005, 0.00001]#[0.00001, 0.00003, 0.000007]#[0.00007, 0.0001, 0.00005]#[0.00001, 0.00003, 0.00005, 0.00007, 0.0001, 0.0003]#[0.00000001, 0.0000001, 0.000001, 0.00001, 0.00005, 0.0001, 0.0005, 0.001]
 #dropouts = [0.2, 0.25, 0.3, 0.35, 0.4]#[0.35, 0.45, 0.55, 0.6, 0.65, 0.7, 0.75]
 if (rand_search_lr):
     for i in range(len(lrs)):
-        lr = lrs[i]#round(np.random.uniform(0.3, 0.6), 2)
+        lr = lrs[i]
         print("lr:", lr)
         #CREATE RNN MODEL
         model = Sequential()
@@ -152,11 +142,11 @@ if (rand_search_lr):
         model.add(Bidirectional(LSTM(embedding_vector_length, return_sequences = True)))
         model.add(Bidirectional(LSTM(embedding_vector_length)))
         model.add(Dropout(dropout)) #[0, 1]
-        model.add((Dense(9, activation='softmax')))
+        model.add(Dense(9, activation='softmax'))
         adam = keras.optimizers.Adam(lr=lr) #[e-10, 1]
         model.compile(loss='categorical_crossentropy', optimizer=adam, metrics=['accuracy'])
         print(model.summary())
-        history = model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=epochs, batch_size=32)
+        history = model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=epochs, batch_size=100)
 
         # Final evaluation of the model
         scores = model.evaluate(X_test, y_test, verbose=0)
